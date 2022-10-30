@@ -1,0 +1,82 @@
+
+Header file found: connect system
+ newline 
+
+Program main function started
+ newline 
+ starting block 
+ newline 
+ -space-  an integer var 
+ -space- a newline 
+ -space-  an integer var 
+ -space- b newline 
+ -space- a -space-  assigning value 
+ -space- a number 5 newline 
+ -space- b -space-  assigning value 
+ -space- a number 6 newline 
+ -space- 
+Single line comment found: ; single line comment
+ newline 
+ -space-  show output 
+ -space- a addition operator 
+b newline 
+ -space-  show output 
+ -space- a subtracgtion operator 
+b newline 
+ -space-  show output 
+ -space- a multiplication operator 
+b -space-  newline 
+ -space-  show output 
+ -space- a division operator 
+b -space-  newline 
+ -space-  show output 
+ -space- a modulo operator 
+b -space-  newline 
+ -space- 
+Multi line comment found: (*multi
+    line
+    comment*)
+ newline 
+ -space-  calculate factorial 
+ -space- a newline 
+ -space-  conditional operator 
+ -space- a is equal?? 
+a number 6 newline 
+ -space-  starting block 
+ newline 
+ -space-  show output 
+ -space- a -space-  newline 
+ -space-  ending block 
+ newline 
+ -space-  else if 
+ -space- b is equal?? 
+a number 6 newline 
+ -space-  starting block 
+ newline 
+ -space-  show output 
+ -space- b -space-  newline 
+ -space-  ending block 
+ newline 
+ -space-  else 
+ newline 
+ -space-  starting block 
+ newline 
+ -space-  show output 
+ -space- a addition operator 
+b -space-  newline 
+ -space-  ending block 
+ -space-  newline 
+ -space-  else if 
+ newline 
+ -space-  starting block 
+ newline 
+ -space-  show output 
+ -space- 
+not matching with predefined syntax: "
+N
+o -space- match
+not matching with predefined syntax: "
+ newline 
+ -space-  ending block 
+ newline 
+ ending block 

@@ -1,0 +1,35 @@
+connect system
+
+initializing program :
+begin-
+    integer a
+    integer b
+    a = 5
+    b = 6
+    ; single line comment
+    show : a add b
+    show : a sub b
+    show : a mul b 
+    show : a div b 
+    show : a mod b 
+    (*multi
+    line
+    comment*)
+    fact a
+    when a isEqual 6
+    begin-
+        show : a 
+    -end
+    or b isEqual 6
+    begin-
+        show : b 
+    -end
+    eor
+    begin-
+        show : a add b 
+    -end 
+    or
+    begin-
+        show : "No match"
+    -end
+-end
