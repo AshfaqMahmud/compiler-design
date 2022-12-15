@@ -2,34 +2,73 @@ connect system
 
 initializing program :
 begin-
-    integer a
-    integer b
-    a = 5
-    b = 6
-    ; single line comment
-    show : a add b
-    show : a sub b
-    show : a mul b 
-    show : a div b 
-    show : a mod b 
+    # single line comment
+    int a;
+    int b;
+    a = 5;
+    b = 6;
+    int c,d;
+    
+    show(a add b);
+    show(a sub b);
+    show(a mul b);
+    show(a div b);
+    show(a mod b);
+
+    c = 2^4;
+    show(c);
     (*multi
     line
     comment*)
+
     fact a
-    when a isEqual 6
-    begin-
-        show : a 
-    -end
-    or b isEqual 6
-    begin-
-        show : b 
-    -end
-    eor
-    begin-
-        show : a add b 
-    -end 
-    or
-    begin-
-        show : "No match"
-    -end
+    when((98 % 2) == !0)
+	begin-
+		98 + 2;
+	-end
+	eor (4 + 5)
+	begin-
+		99;
+	-end
+	or
+	begin-
+		101;
+	-end
+
+    switch (4)
+	begin-
+		case 1:
+			1+1;
+		case 2:
+			2+1;
+		case 3:
+			3+1;
+		default:
+			10+1;
+	-end
+
+    loop(1 < 5)
+	begin-
+		55;
+	-end
+	loop(1, 5, 1)
+	begin-
+		555;
+	-end
+
+    func stark (int fa; int fb;)
+	begin-
+		int fc;
+		fa = 49;
+		fb = 2;
+		fc = fa * fb;
+		pf(fc);
+	-end
+    array <int> intara ( 5 );
+    factorial(5);
+    min(4, 5);
+	max(4, 5);
+    isprime(97);
+	isprime(98);
+    
 -end
