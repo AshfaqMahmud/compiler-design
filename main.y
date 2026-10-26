@@ -1,481 +1,149 @@
 %{
-	/* C Declarations */
-	#include<stdio.h>
-	#include<stdlib.h>
-	#include<math.h>
-	#include<string.h>
-	#define maxn 1000007
-	char valname[1009][1009];
-	int data[1009], switch_data[maxn+1];
-	int idx = 1;
-	int isDeclared(char *now) {
-		for(int i=1; i<idx; i++) {
-			if(strcmp(valname[i], now) == 0) {
-				return i; 
-			}
-		}
-		return 0;
-	}
-	int addNewVal(char *now){
-		if(isDeclared(now)) return 0;
-		strcpy(valname[idx], now);
-		data[idx]=0;
-		idx++;
-	}
-	int getVal(char *now) {
-		return data[isDeclared(now)];
-	}
-	int setVal(char *now, int v) {
-		int id = isDeclared(now);
-		data[id] = v;
-	}
+#include "ast.h"
+#include <stddef.h>
+int yylex(void);
 %}
 
-/* Bison Declarations */
-%union{
-	char text[1009];
-	int val;
+%union {
+    char text[128];
+    int val;
+    Node *node;
 }
-%token<val>NUMBER
-%token<text>VAR
-%token STARTPROGRAM IF PLUS MINUS MUL DIV MOD INCREMENT DECREMENT LTE GTE EQL NEQL NOT ELSE ELIF INT FLOAT CHAR CBS CBE LOOP WHILE EVENODD SHOW SIN COS TAN LOG FACTORIAL CASE DEFAULT SWITCH MIN MAX GCD LCM ISPRIME POW POWMOD MULMOD FUNCTION ARRAY ARRINT ARRFLOAT ARRCHAR CLASS
-%type<val>statement
-%type<val>function_statement
-%type<val>expression
-%nonassoc IF
-%nonassoc ELIF
-%nonassoc ELSE
+
+%locations
+%error-verbose
+%token <val> NUMBER
+%token <text> VAR
+%token INVALID
+%token STARTPROGRAM CBS CBE SET TO
+%token PLUS MINUS MUL DIV MOD LT GT LTE GTE EQUAL NOT INCREMENT DECREMENT
+%token IF ELSE ELIF LOOP SWITCH CASE DEFAULT
+%token SHOW FACTORIAL MIN MAX ISPRIME POW INT FLOAT CHAR ARRAY FUNCTION
+%type <node> block line statement declaration variable_list assignment
+%type <node> expression conditional alternative loop_statement case_list
+%type <node> function_declaration parameters parameter arguments
+%type <val> datatype
+
+%left EQUAL
+%left LT GT LTE GTE
 %left PLUS MINUS
-%left MUL DIV
-
-/* Grammar Rules */
+%left MUL DIV MOD
+%right NOT
+%left INCREMENT DECREMENT
+%start program
 
 %%
 
-program : STARTPROGRAM '(' ')' ':' CBS line CBE {printf("\nSuccesful Compilation\n");}
-	;
-
-line: 
-	| line statement
-	;
-
-statement: ';'
-
-	| declaration ';'	{  }
-
-	| expression ';'	{$$ = $1;}
-	
-	| VAR '=' expression ';' { 
-		printf("\nValue of the variable: %d\n",$3);
-		setVal($1, $3); //data[$1]=$3;
-		$$ = $3;
-	} 
-
-	| IF '(' expression ')' CBS statement CBE {
-		if($3) {
-			printf("\nvalue of expression in IF: %d\n",$6);
-		}
-		else{
-			printf("\ncondition value zero in IF block\n");
-		}
-	}
-
-	| IF '(' expression ')' CBS statement CBE ELSE CBS statement CBE  {
-		if($3){
-			printf("value of expression in IF: %d\n",$6);
-		}
-		else{
-			printf("value of expression in ELSE: %d\n",$10);
-		}
-	}
-
-	| IF '(' expression ')' CBS statement CBE ELIF '(' expression ')' CBS statement CBE ELSE CBS statement CBE {
-		if($3) {
-			printf("\nValue of expression in IF: %d\n", $6);
-		}
-		else if($10) {
-			printf("\nValue of expression in ELIF: %d\n", $13);
-		}
-		else{
-			printf("\nValue of expression in ELSE: %d\n", $17);
-		}
-	}
-
-	| SWITCH '(' expression ')' CBS casenumber CBE {
-		printf("\nSwitch Case Declared\n");
-		if(switch_data[$3]) printf("\nChoosen case number is : %d and the value is: %d\n", $3, switch_data[$3]);
-		else printf("\nChoosen case number is: Default and the value is: %d\n", $3, switch_data[$3]);
-		memset(switch_data, 0, sizeof(switch_data));
-	}
-
-	| LOOP '(' expression '<' expression ')' CBS statement CBE {
-	    for(int i=$3 ; i<$5 ; i++) {printf("\nCounter in the loop: %d\n", i);}	
-	}
-
-	| LOOP '(' expression LTE expression ')' CBS statement CBE {
-	    for(int i=$3 ; i<=$5 ; i++) {printf("\nCounter in the loop: %d\n", i);}	
-	}
-
-	| LOOP '(' expression '>' expression ')' CBS statement CBE {
-	    for(int i=$5 ; i<$3 ; i++) {printf("\nCounter in the loop: %d\n", i);}		
-	}
-
-	| LOOP '(' expression GTE expression ')' CBS statement CBE {
-	    for(int i=$5 ; i<=$3 ; i++) {printf("\nCounter in the loop: %d\n", i);}		
-	}
-
-	| LOOP '(' expression ',' expression ',' expression ')' CBS statement CBE {
-	    if($3 <= $5) {
-	    	for(int i=$3 ; i<$5 ; i+=$7) {printf("\nCounter in the loop: %d\n", i);}	
-	    }
-	    else {
-	    	for(int i=$3 ; i>$5 ; i-=$7) {printf("\nCounter in the loop: %d\n", i);}	
-	    }
-	}
-
-	| SHOW '(' expression ')' ';' {
-		printf("\nPrint Function: %d\n",$3);
-	}
-
-	| FUNCTION VAR '(' function_line ')' CBS function_line CBE {
-		printf("\nFunction Declared\n");
-	}
-
-	| ARRAY ARRINT VAR '(' NUMBER ')' ';' {
-		printf("\nInterger Array Declared\n");
-		printf("\nSize of the array is: %d\n", $5);
-	}
-
-	| ARRAY ARRFLOAT VAR '(' NUMBER ')' ';' {
-		printf("\nFloating Array Declared\n");
-		printf("\nSize of the array is: %d\n", $5);
-	}
-
-	| ARRAY ARRCHAR VAR '(' NUMBER ')' ';' {
-		printf("\nCharacter Array Declared\n");
-		printf("\nSize of the array is: %d\n", $5);
-	}
-
-	| CLASS VAR CBS statement CBE ';' {
-		printf("\nClass Declared\n");
-	}
-
-	| FACTORIAL '(' NUMBER ')' ';' {
-		int fact = 1;
-		for(int i=1; i<=$3; i++) {
-			fact *= i;
-		}
-		printf("\nFactorial of %d is: %d\n", $3, fact);
-	}
-
-	| EVENODD '(' NUMBER ')' ';' {
-		if($3 % 2 == 0) {
-			printf("Number : %d is Even\n",$3);
-		}
-		else {
-			printf("Number is :%d is Odd\n",$3);
-		}
-	}
-
-	| MIN '(' NUMBER ',' NUMBER ')' ';' {
-		int n1 = $3;
-		int n2 = $5;
-		printf("\nMin of (%d, %d) is: ", n1, n2);
-		if(n1 < n2) printf("%d\n", n1);
-		else printf("%d\n", n2);
-	}
-
-	| MAX '(' NUMBER ',' NUMBER ')' ';' {
-		int n1 = $3;
-		int n2 = $5;
-		printf("\nMax of (%d, %d) is: ", n1, n2);
-		if(n1 > n2) printf("%d\n", n1);
-		else printf("%d\n", n2);
-	}
-
-	| ISPRIME '(' NUMBER ')' ';' {
-		int n1 = $3, fl = 1;
-		for(int i=2; i<=n1/2; i++) {
-			if(n1 % i == 0) {
-				fl = 0;
-				break;
-			}
-		}
-		if(fl) printf("\n%d is a Prime number.\n", n1);
-		else printf("\n%d is Not a prime number\n", n1);
-	}
-
-	| POW '(' NUMBER ',' NUMBER ')' ';' {
-		int n1 = $3;
-		int n2 = $5;
-		int res = pow(n1, n2);
-		printf("\n%d Power %d is: %d\n", n1, n2, res);
-	}
-	;
-
-
-function_line: 
-	| function_line function_statement
-	;
-
-function_statement: ';'
-
-	| declaration ';'	{ }
-
-	| expression ';'	{$$ = $1;}
-	
-	| VAR '=' expression ';' { 
-		printf("\nValue of the variable: %d\n",$3);
-		setVal($1, $3); //data[$1]=$3;
-		$$ = $3;
-	} 
-
-	| IF '(' expression ')' CBS function_statement CBE {
-		if($3) {
-			printf("\nvalue of expression in IF: %d\n",$6);
-		}
-		else{
-			printf("\ncondition value zero in IF block\n");
-		}
-	}
-
-	| IF '(' expression ')' CBS function_statement CBE ELSE CBS function_statement CBE  {
-		if($3){
-			printf("value of expression in IF: %d\n",$6);
-		}
-		else{
-			printf("value of expression in ELSE: %d\n",$10);
-		}
-	}
-
-	| IF '(' expression ')' CBS function_statement CBE ELIF '(' expression ')' CBS function_statement CBE ELSE CBS function_statement CBE {
-		if($3) {
-			printf("\nValue of expression in IF: %d\n", $6);
-		}
-		else if($10) {
-			printf("\nValue of expression in ELIF: %d\n", $13);
-		}
-		else{
-			printf("\nValue of expression in ELSE: %d\n", $17);
-		}
-	}
-
-	| SWITCH '(' expression ')' CBS casenumber CBE {
-		printf("\nSwitch Case Declared\n");
-		if(switch_data[$3]) printf("\nChoosen case number is : %d and the value is: %d\n", $3, switch_data[$3]);
-		else printf("\nChoosen case number is: Default and the value is: %d\n", $3, switch_data[$3]);
-		memset(switch_data, 0, sizeof(switch_data));
-	}
-
-	| LOOP '(' expression '<' expression ')' CBS function_statement CBE {
-	    for(int i=$3 ; i<$5 ; i++) {printf("\nCounter in the loop: %d\n", i);}	
-	}
-
-	| LOOP '(' expression LTE expression ')' CBS function_statement CBE {
-	    for(int i=$3 ; i<=$5 ; i++) {printf("\nCounter in the loop: %d\n", i);}
-	}
-
-	| LOOP '(' expression '>' expression ')' CBS function_statement CBE {
-	    for(int i=$5 ; i<$3 ; i++) {printf("\nCounter in the loop: %d\n", i);}	
-	}
-
-	| LOOP '(' expression GTE expression ')' CBS function_statement CBE {
-	    for(int i=$5 ; i<=$3 ; i++) {printf("\nCounter in the loop: %d\n", i);}
-	}
-
-	| LOOP '(' expression ',' expression ',' expression ')' CBS function_statement CBE {
-	    if($3 <= $5) {
-	    	for(int i=$3 ; i<$5 ; i+=$7) {printf("\nCounter in the loop: %d\n", i);}	
-	    }
-	    else {
-	    	for(int i=$3 ; i>$5 ; i-=$7) {printf("\nCounter in the loop: %d\n", i);}	
-	    }
-	}
-
-	| SHOW '(' expression ')' ';' {
-		printf("\nPrint Function: %d\n",$3);
-	}
-
-	| ARRAY ARRINT VAR '(' NUMBER ')' ';' {
-		printf("\nInterger Array Declared\n");
-		printf("\nSize of the array is: %d\n", $5);
-	}
-
-	| ARRAY ARRFLOAT VAR '(' NUMBER ')' ';' {
-		printf("\nFloating Array Declared\n");
-		printf("\nSize of the array is: %d\n", $5);
-	}
-
-	| ARRAY ARRCHAR VAR '(' NUMBER ')' ';' {
-		printf("\nCharacter Array Declared\n");
-		printf("\nSize of the array is: %d\n", $5);
-	}
-
-	| FACTORIAL '(' NUMBER ')' ';' {
-		int fact = 1;
-		for(int i=1; i<=$3; i++) {
-			fact *= i;
-		}
-		printf("\nFactorial of %d is: %d\n", $3, fact);
-	}
-
-	| EVENODD '(' NUMBER ')' ';' {
-		if($3 % 2 == 0) {
-			printf("Number : %d is Even\n",$3);
-		}
-		else {
-			printf("Number is :%d is Odd\n",$3);
-		}
-	}
-
-	| MIN '(' NUMBER ',' NUMBER ')' ';' {
-		int n1 = $3;
-		int n2 = $5;
-		printf("\nMin of (%d, %d) is: ", n1, n2);
-		if(n1 < n2) printf("%d\n", n1);
-		else printf("%d\n", n2);
-	}
-
-	| MAX '(' NUMBER ',' NUMBER ')' ';' {
-		int n1 = $3;
-		int n2 = $5;
-		printf("\nMax of (%d, %d) is: ", n1, n2);
-		if(n1 > n2) printf("%d\n", n1);
-		else printf("%d\n", n2);
-	}
-
-	| ISPRIME '(' NUMBER ')' ';' {
-		int n1 = $3, fl = 1;
-		for(int i=2; i<=n1/2; i++) {
-			if(n1 % i == 0) {
-				fl = 0;
-				break;
-			}
-		}
-		if(fl) printf("\n%d is a Prime number.\n", n1);
-		else printf("\n%d is Not a prime number\n", n1);
-	}
-
-	| POW '(' NUMBER ',' NUMBER ')' ';' {
-		int n1 = $3;
-		int n2 = $5;
-		int res = pow(n1, n2);
-		printf("\n%d Power %d is: %d\n", n1, n2, res);
-	}
-
-	;
-
-
-declaration: datatype ID   {printf("\nVariable Declared\n");}
-     ;
-
-
-datatype : INT 	{printf("\nInterger Declaration\n");}
-     | FLOAT  		{printf("\nFloat Declaration\n");}
-     | CHAR   		{printf("\nCharacter Declaration\n");}
-     ;
-
-
-
-ID : ID ',' VAR {
-	int res = addNewVal($3);
-		if(res == 0){
-			printf("\nVariable already declared\n");
-			exit(-1);
-		}
-	}
-
-     | VAR {
-		int res = addNewVal($1);
-		if(res == 0){
-			printf("\nVariable already declared\n");
-			exit(-1);
-		}
-	}  
-     ;
-
-casenumber: caserule
- 	| caserule defaultnum
- 	;
-
-caserule:
- 	| caserule casenum
- 	;
-
-casenum: CASE NUMBER ':' expression ';' {
-		printf("\nExpression value is %d of Case %d\n", $4, $2);
-		switch_data[$2] = $4;
-	}
- 	;
-
-defaultnum: DEFAULT ':' expression ';' {
-		printf("\nExpression value is %d of Default case\n", $3);
-		switch_data[maxn] = $3;
-	}
- 	;
-
-expression: NUMBER 				{$$ = $1;}
-
-	| VAR 					{$$ = getVal($1);}
-	
-	| expression PLUS expression	{$$ = $1 + $3;}
-
-	| expression MINUS expression	{$$ = $1 - $3;}
-
-	| expression MUL expression	{$$ = $1 * $3;}
-
-	| expression '^' expression	{$$ = $1 ^ $3;}
-
-	| expression '<' expression	{$$ = $1 < $3;}
-	
-	| expression '>' expression	{$$ = $1 > $3;}
-
-	| expression LTE expression	{$$ = $1 <= $3;}
-	
-	| expression GTE expression	{$$ = $1 >= $3;}
-
-	| expression EQL expression	{$$ = $1 == $3;}
-
-	| expression NEQL expression	{$$ = $1 != $3;}
-
-	| expression INCREMENT		{$$ = $1 + 1;}
-
-	| expression DECREMENT		{$$ = $1 - 1;}
-
-	| NOT expression			{$$ = !$2;}
-
-	| '(' expression ')'		{$$ = $2;}
-
-	| expression DIV expression {
-		if($3) {$$ = $1 / $3;}
-		else {$$ = 0; printf("\nDivision by Zero\n");} 	
-	}
-
-	| expression MOD expression { 
-		if($3) {$$ = $1 % $3;}
-		else {$$ = 0; printf("\nMod by Zero\n");} 	
-	}
-
-	;
-
+program
+    : STARTPROGRAM block { program_root = $2; }
+    ;
+block
+    : CBS line CBE { $$ = node_new(N_BLOCK, @1.first_line, $2, NULL, NULL, NULL); }
+    ;
+line
+    : { $$ = NULL; }
+    | line statement { $$ = node_append($1, $2); }
+    ;
+statement
+    : ';' { $$ = NULL; }
+    | declaration ';' { $$ = $1; }
+    | assignment ';' { $$ = $1; }
+    | expression ';' { $$ = node_new(N_EXPRESSION, @1.first_line, $1, NULL, NULL, NULL); }
+    | SHOW '(' expression ')' ';' { $$ = node_new(N_SHOW, @1.first_line, $3, NULL, NULL, NULL); }
+    | SHOW ':' expression ';' { $$ = node_new(N_SHOW, @1.first_line, $3, NULL, NULL, NULL); }
+    | conditional { $$ = $1; }
+    | block { $$ = $1; }
+    | loop_statement { $$ = $1; }
+    | SWITCH '(' expression ')' CBS case_list CBE
+      { $$ = node_new(N_SWITCH, @1.first_line, $3, $6, NULL, NULL); }
+    | function_declaration { $$ = $1; }
+    | VAR '(' arguments ')' ';' { $$ = node_named(N_CALL, @1.first_line, $1, $3, NULL); }
+    | ARRAY '<' datatype '>' VAR '(' NUMBER ')' ';'
+      {
+          $$ = node_named(N_ARRAY, @1.first_line, $5, NULL, NULL);
+          $$->type = $3; $$->value = $7;
+      }
+    ;
+declaration
+    : datatype variable_list { $$ = node_type($2, $1); }
+    ;
+datatype
+    : INT { $$ = 0; }
+    | FLOAT { $$ = 1; }
+    | CHAR { $$ = 2; }
+    ;
+variable_list
+    : VAR { $$ = node_named(N_DECLARE, @1.first_line, $1, NULL, NULL); }
+    | variable_list ',' VAR
+      { $$ = node_append($1, node_named(N_DECLARE, @3.first_line, $3, NULL, NULL)); }
+    ;
+assignment
+    : VAR '=' expression { $$ = node_named(N_ASSIGN, @1.first_line, $1, $3, NULL); }
+    | SET VAR TO expression { $$ = node_named(N_ASSIGN, @1.first_line, $2, $4, NULL); }
+    ;
+conditional
+    : IF '(' expression ')' block alternative
+      { $$ = node_new(N_IF, @1.first_line, $3, $5, $6, NULL); }
+    ;
+alternative
+    : { $$ = NULL; }
+    | ELSE block { $$ = $2; }
+    | ELIF '(' expression ')' block alternative
+      { $$ = node_new(N_IF, @1.first_line, $3, $5, $6, NULL); }
+    ;
+loop_statement
+    : LOOP '(' expression ')' block
+      { $$ = node_new(N_WHILE, @1.first_line, $3, $5, NULL, NULL); }
+    | LOOP '(' expression ',' expression ',' expression ')' block
+      { $$ = node_new(N_RANGE, @1.first_line, $3, $5, $7, $9); }
+    ;
+case_list
+    : { $$ = NULL; }
+    | case_list CASE NUMBER ':' statement
+      { Node *entry = node_value(N_CASE, @2.first_line, $3);
+        entry->a = $5; $$ = node_append($1, entry); }
+    | case_list DEFAULT ':' statement
+      { Node *entry = node_new(N_CASE, @2.first_line, $4, NULL, NULL, NULL);
+        entry->op = 1; $$ = node_append($1, entry); }
+    ;
+function_declaration
+    : FUNCTION VAR '(' parameters ')' block
+      { $$ = node_named(N_FUNCTION, @1.first_line, $2, $4, $6); }
+    ;
+parameters
+    : { $$ = NULL; }
+    | parameter { $$ = $1; }
+    | parameters ',' parameter { $$ = node_append($1, $3); }
+    ;
+parameter
+    : datatype VAR { $$ = node_named(N_PARAMETER, @2.first_line, $2, NULL, NULL); $$->type = $1; }
+    ;
+arguments
+    : { $$ = NULL; }
+    | expression { $$ = $1; }
+    | arguments ',' expression { $$ = node_append($1, $3); }
+    ;
+expression
+    : NUMBER { $$ = node_value(N_NUMBER, @1.first_line, $1); }
+    | VAR { $$ = node_named(N_VARIABLE, @1.first_line, $1, NULL, NULL); }
+    | expression PLUS expression { $$ = node_operator(N_BINARY, @2.first_line, OP_ADD, $1, $3); }
+    | expression MINUS expression { $$ = node_operator(N_BINARY, @2.first_line, OP_SUB, $1, $3); }
+    | expression MUL expression { $$ = node_operator(N_BINARY, @2.first_line, OP_MUL, $1, $3); }
+    | expression DIV expression { $$ = node_operator(N_BINARY, @2.first_line, OP_DIV, $1, $3); }
+    | expression MOD expression { $$ = node_operator(N_BINARY, @2.first_line, OP_MOD, $1, $3); }
+    | expression LT expression { $$ = node_operator(N_BINARY, @2.first_line, OP_LT, $1, $3); }
+    | expression GT expression { $$ = node_operator(N_BINARY, @2.first_line, OP_GT, $1, $3); }
+    | expression LTE expression { $$ = node_operator(N_BINARY, @2.first_line, OP_LTE, $1, $3); }
+    | expression GTE expression { $$ = node_operator(N_BINARY, @2.first_line, OP_GTE, $1, $3); }
+    | expression EQUAL expression { $$ = node_operator(N_BINARY, @2.first_line, OP_EQUAL, $1, $3); }
+    | NOT expression { $$ = node_operator(N_UNARY, @1.first_line, OP_NOT, $2, NULL); }
+    | expression INCREMENT { $$ = node_operator(N_UNARY, @2.first_line, OP_INCREMENT, $1, NULL); }
+    | expression DECREMENT { $$ = node_operator(N_UNARY, @2.first_line, OP_DECREMENT, $1, NULL); }
+    | '(' expression ')' { $$ = $2; }
+    | FACTORIAL '(' expression ')' { $$ = node_operator(N_BUILTIN, @1.first_line, OP_FACT, $3, NULL); }
+    | MIN '(' expression ',' expression ')' { $$ = node_operator(N_BUILTIN, @1.first_line, OP_MIN, $3, $5); }
+    | MAX '(' expression ',' expression ')' { $$ = node_operator(N_BUILTIN, @1.first_line, OP_MAX, $3, $5); }
+    | ISPRIME '(' expression ')' { $$ = node_operator(N_BUILTIN, @1.first_line, OP_PRIME, $3, NULL); }
+    | POW '(' expression ',' expression ')' { $$ = node_operator(N_BUILTIN, @1.first_line, OP_POW, $3, $5); }
+    ;
 %%
-
-/* Additional C Codes */
-int yyerror(char *s){
-	printf( "%s\n", s);
-}
-
-int yywrap()
-{
-	return 1;
-}
-
-int main()
-{
-	freopen("input.txt", "r", stdin);
-	//freopen("output.txt" ,"w", stdout);
-
-	yyparse();
-
-	return 0;
-}

@@ -1,68 +1,118 @@
 %{
-	#include<stdio.h>
-	#include<string.h>
-	#include<stdlib.h>
-	#include<math.h>
-	#include "main.tab.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <errno.h>
+#include <limits.h>
+#include "ast.h"
+#include "main.tab.h"
 
+int lexer_line = 1;
+static int lexer_column = 1;
+static int comment_line;
+#define YY_USER_ACTION \
+    yylloc.first_line = lexer_line; \
+    yylloc.first_column = lexer_column; \
+    for (size_t i = 0; i < (size_t)yyleng; ++i) { \
+        if (yytext[i] == '\n') { ++lexer_line; lexer_column = 1; } \
+        else ++lexer_column; \
+    } \
+    yylloc.last_line = lexer_line; \
+    yylloc.last_column = lexer_column;
 %}
 
-variable		[a-zA-Z]*
-digit			[0-9]
-heading			"connect ".*
-cmnt			[#].*
-mul_cmnt 		"##"[^##]*"##"
+%option noyywrap noinput nounput
+%x COMMENT
+
+identifier      [a-zA-Z_][a-zA-Z0-9_]*
+number          [0-9]+
 
 %%
+"initializing program :"   { return STARTPROGRAM; }
+"initializing program"     { return STARTPROGRAM; }
+"begin-"                    { return CBS; }
+"-end"                      { return CBE; }
 
-"initializing program :"	{printf("\nProgram main function started\n"); return STARTPROGRAM;}
-"begin-"			{printf(" starting block \n"); return CBS;}
-"-end"				{printf(" ending block \n"); return CBE;}
-"="					{printf(" assigning value");}
-"add"				{printf(" addition operator"); return PLUS;}
-"++"				{printf(" increment"); return INCREMENT;}
-"sub"      			{printf(" subtracgtion operator"); return MINUS;}
-"--"				{printf(" decrement"); return DECREMENT;}
-"mul"				{printf(" multiplication operator"); return MUL;}
-"div"   			{printf(" division operator"); return DIV;}
-"mod"    			{printf(" modulo operator"); return MOD;}
-"lte"				{printf(" less than equal??"); return LTE;}
-"gte"				{printf(" greater than equal??"); return GTE;}
-"isEqual"			{printf(" is equal??"); return EQL;}
-"isNotEqual"		{printf(" NotEqual operator"); return NEQL;}
-"Not"				{printf(" Not operator"); return NOT;}
-"case"				{printf(" case \n"); return CASE;}
-"switch"			{printf(" switch operator \n"); return SWITCH;}
-"default"			{printf(" default case"); return DEFAULT;}
-"show :"			{printf(" show output"); return SHOW;} 
-"when"				{printf(" conditional operator \n"); return IF;}
-"or"				{printf(" else\n"); return ELSE;}
-"eor"				{printf(" else if \n"); return ELIF;}
-"loop"				{return LOOP;}
-"till"				{printf(" while loop \n"); return WHILE;}
-"fact"				{printf(" calculate factorial"); return FACTORIAL;}
-"evenodd"			{return EVENODD;}
-"int"  				{printf(" an integer var"); return INT;}
-"ch" 				{printf(" an char var"); return CHAR;}
-"float"				{printf(" an float var"); return FLOAT;}
-"array"				{printf(" an array"); return ARRAY;}
-"<int>"				{printf(" an integer array"); return ARRINT;}
-"<float>"			{printf(" an float array"); return ARRFLOAT;}
-"<ch>"				{printf(" an char array"); return ARRCHAR;}
-"min" 				{return MIN;}
-"max" 				{return MAX;}
-"isprime"			{return ISPRIME;}
-"exp" 				{printf(" power function"); return POW;}
-"func"				{printf("\nFunction Declaration\n"); return FUNCTION;}
-{heading}			{printf("\nHeader file found: "); ECHO; printf("\n");}
-{cmnt}				{printf("\nSingle line comment found: "); ECHO;printf("\n");}
-{mul_cmnt}			{printf("\nMulti line comment found: "); ECHO;printf("\n");}
-[<>=,():;^]			{return yytext[0];}
-{digit}+			{int n = atoi(yytext); printf("a number %d",n); return NUMBER;}
-{variable}			{printf("%s",yytext); strcpy(yylval.text, yytext); return VAR;}
-[ ]*	    		{}
-[\n]*				{}
-[\t]*				{}
-.					{printf("\nUnknown syntax: %s\n", yytext);}
+"set"                       { return SET; }
+"to"                        { return TO; }
+"add"                       { return PLUS; }
+"sub"                       { return MINUS; }
+"mul"                       { return MUL; }
+"div"                       { return DIV; }
+"mod"                       { return MOD; }
+"lt"                        { return LT; }
+"gt"                        { return GT; }
+"lte"                       { return LTE; }
+"gte"                       { return GTE; }
+"equal"                     { return EQUAL; }
+"not"                       { return NOT; }
+"increment"                 { return INCREMENT; }
+"decrement"                 { return DECREMENT; }
+
+"when"                      { return IF; }
+"eor"                       { return ELIF; }
+"or"                        { return ELSE; }
+"loop"                      { return LOOP; }
+"switch"                    { return SWITCH; }
+"case"                      { return CASE; }
+"default"                   { return DEFAULT; }
+
+"show"                      { return SHOW; }
+"fact"                      { return FACTORIAL; }
+"min"                       { return MIN; }
+"max"                       { return MAX; }
+"isprime"                   { return ISPRIME; }
+"exp"                       { return POW; }
+
+"int"                       { return INT; }
+"float"                     { return FLOAT; }
+"ch"                        { return CHAR; }
+"array"                     { return ARRAY; }
+"func"                      { return FUNCTION; }
+
+"##"                        { comment_line = yylloc.first_line; BEGIN(COMMENT); }
+<COMMENT>"##"               { BEGIN(INITIAL); }
+<COMMENT>\n                 { /* location updated by YY_USER_ACTION */ }
+<COMMENT>.                  { /* comment body */ }
+<COMMENT><<EOF>>            {
+                                fprintf(stderr, "line %d: lexical error: unterminated comment\n", comment_line);
+                                ++diagnostic_errors;
+                                BEGIN(INITIAL);
+                                return INVALID;
+                            }
+"#"[^#\n][^\n]*            { /* single-line comment */ }
+"#"                         { /* empty single-line comment */ }
+"connect"[ \t]+[^\n]*    { /* optional header */ }
+
+{number}                    {
+                                errno = 0;
+                                long value = strtol(yytext, NULL, 10);
+                                if (errno == ERANGE || value > INT_MAX) {
+                                    fprintf(stderr, "line %d: lexical error: integer literal out of range\n", yylloc.first_line);
+                                    ++diagnostic_errors;
+                                    return INVALID;
+                                }
+                                yylval.val = (int)value;
+                                return NUMBER;
+                            }
+{identifier}                {
+                                if ((size_t)yyleng >= sizeof(yylval.text)) {
+                                    fprintf(stderr, "line %d: lexical error: identifier exceeds 127 characters\n", yylloc.first_line);
+                                    ++diagnostic_errors;
+                                    return INVALID;
+                                }
+                                memcpy(yylval.text, yytext, (size_t)yyleng + 1);
+                                return VAR;
+                            }
+
+[ \t\r\n]+                 { /* whitespace */ }
+"="                         { return '='; }
+[(),:;<>]                   { return yytext[0]; }
+
+.                           {
+                                fprintf(stderr, "line %d: lexical error: unknown character: %s\n", yylloc.first_line, yytext);
+                                ++diagnostic_errors;
+                                return INVALID;
+                            }
 
 %%
