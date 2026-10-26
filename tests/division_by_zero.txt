@@ -1,0 +1,4 @@
+initializing program :
+begin-
+    show(8 div 0);
+-end
