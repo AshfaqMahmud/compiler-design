@@ -1,0 +1,45 @@
+initializing program :
+begin-
+    int a, count;
+    set a to 8;
+    show(a add 2 mul 3);
+    show((a add 2) mul 3);
+    show(a div 2);
+    show(a mod 3);
+    show(a lt 10);
+    show(not (a equal 8));
+    show(fact(5));
+    show(exp(2, 4));
+    show(isprime(1));
+
+    # Only the else branch should execute.
+    when (a equal 0)
+    begin-
+        show(111);
+    -end
+    or
+    begin-
+        show(222);
+    -end
+
+    # The body of a false condition must not modify a variable.
+    when (0)
+    begin-
+        set a to 999;
+    -end
+    show(a);
+
+    # Three iterations should increase count from zero to three.
+    set count to 0;
+    loop(1, 4, 1)
+    begin-
+        set count to count add 1;
+    -end
+    show(count);
+
+    # Declaring a function must not execute its body.
+    func unused()
+    begin-
+        show(333);
+    -end
+-end

@@ -2,34 +2,49 @@ connect system
 
 initializing program :
 begin-
-    integer a
-    integer b
-    a = 5
-    b = 6
-    ; single line comment
-    show : a add b
-    show : a sub b
-    show : a mul b 
-    show : a div b 
-    show : a mod b 
-    (*multi
-    line
-    comment*)
-    fact a
-    when a isEqual 6
+    # declarations and readable assignments
+    int a, b, count;
+    set a to 5;
+    set b to 6;
+
+    show(a add b);
+    show(a sub b);
+    show(a mul b);
+    show(a div b);
+    show(a mod b);
+
+    when (a equal b)
     begin-
-        show : a 
+        show(a);
     -end
-    or b isEqual 6
+    eor (a lt b)
     begin-
-        show : b 
+        show(b);
     -end
-    eor
-    begin-
-        show : a add b 
-    -end 
     or
     begin-
-        show : "No match"
+        show(0);
     -end
+
+    loop(1, 5, 1)
+    begin-
+        set count to count add 1;
+    -end
+    show(count);
+
+    show(fact(5));
+    show(min(4, 5));
+    show(max(4, 5));
+    show(isprime(97));
+    show(exp(2, 4));
+
+    func stark (int fa, int fb)
+    begin-
+        int fc;
+        set fc to fa mul fb;
+        show(fc);
+    -end
+    stark(49, 2);
+
+    array <int> values(5);
 -end

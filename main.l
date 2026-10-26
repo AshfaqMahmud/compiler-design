@@ -1,68 +1,118 @@
 %{
-	#include<stdio.h>
-	#include<string.h>
-	#include<stdlib.h>
-	#include<math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <errno.h>
+#include <limits.h>
+#include "ast.h"
+#include "main.tab.h"
 
+int lexer_line = 1;
+static int lexer_column = 1;
+static int comment_line;
+#define YY_USER_ACTION \
+    yylloc.first_line = lexer_line; \
+    yylloc.first_column = lexer_column; \
+    for (size_t i = 0; i < (size_t)yyleng; ++i) { \
+        if (yytext[i] == '\n') { ++lexer_line; lexer_column = 1; } \
+        else ++lexer_column; \
+    } \
+    yylloc.last_line = lexer_line; \
+    yylloc.last_column = lexer_column;
 %}
 
-variable		[a-z]+
-digit			[0-9]
-heading			"connect ".*
-cmnt			[;].*
-mul_cmnt 		"(*"[^*)]*"*)"
+%option noyywrap noinput nounput
+%x COMMENT
+
+identifier      [a-zA-Z_][a-zA-Z0-9_]*
+number          [0-9]+
 
 %%
+"initializing program :"   { return STARTPROGRAM; }
+"initializing program"     { return STARTPROGRAM; }
+"begin-"                    { return CBS; }
+"-end"                      { return CBE; }
 
-"initializing program :"	{printf("\nProgram main function started\n");}
-"begin-"			{printf(" starting block \n");}
-"-end"				{printf(" ending block \n");}
-"="					{printf(" assigning value");}
-" add "				{printf(" addition operator");}
-"+add"				{printf(" increment");}
-" sub "      		{printf(" subtracgtion operator");}
-"-sub"				{printf(" decrement");}
-" mul "				{printf(" multiplication operator");}
-" div "   			{printf(" division operator");}
-" mod "    			{printf(" modulo operator");}
-" lte "				{printf(" less than equal??");}
-" gte "				{printf(" greater than equal??");}
-" isEqual "			{printf(" is equal??");}
-" isNot "			{printf(" Not operator");}
-"case"				{printf(" case \n");}
-"switch"			{printf(" switch operator \n");}
-"default"			{printf(" default case");}
-"show :"			{printf(" show output");} 
-"when"				{printf(" conditional operator \n");}
-"eor"				{printf(" else if \n");}
-"or"				{printf(" else\n");}
-"till"				{printf(" while loop \n");}
-"fact"				{printf(" calculate factorial");}
-"integer"  			{printf(" an integer var");}
-"ch" 				{printf(" an char var");}
-"float"				{printf(" an float var");}
-"array"				{printf(" an array");}
-"<integer>"			{printf(" an integer array");}
-"<float>"			{printf(" an float array");}
-"<ch>"				{printf(" an char array");}
-"exp" 				{printf(" power function");}
-"func"				{printf("\nFunction Declaration\n");}
-{heading}			{printf("\nHeader file found: "); ECHO; printf("\n");}
-{cmnt}				{printf("\nSingle line comment found: "); ECHO;printf("\n");}
-{mul_cmnt}			{printf("\nMulti line comment found: "); ECHO;printf("\n");}
-{digit}+			{int n = atoi(yytext); printf("a number %d",n);}
-{variable}			{printf("%s",yytext);}
-[ ]*	    		{printf(" -space- ");}
-[\n]*				{printf(" newline \n");}
-[\t]*				{printf(" -tab- ");}
-[a-zA-Z] 			{printf("%s\n", yytext);}
-.					{printf("\nnot matching with predefined syntax: %s\n", yytext);}
+"set"                       { return SET; }
+"to"                        { return TO; }
+"add"                       { return PLUS; }
+"sub"                       { return MINUS; }
+"mul"                       { return MUL; }
+"div"                       { return DIV; }
+"mod"                       { return MOD; }
+"lt"                        { return LT; }
+"gt"                        { return GT; }
+"lte"                       { return LTE; }
+"gte"                       { return GTE; }
+"equal"                     { return EQUAL; }
+"not"                       { return NOT; }
+"increment"                 { return INCREMENT; }
+"decrement"                 { return DECREMENT; }
+
+"when"                      { return IF; }
+"eor"                       { return ELIF; }
+"or"                        { return ELSE; }
+"loop"                      { return LOOP; }
+"switch"                    { return SWITCH; }
+"case"                      { return CASE; }
+"default"                   { return DEFAULT; }
+
+"show"                      { return SHOW; }
+"fact"                      { return FACTORIAL; }
+"min"                       { return MIN; }
+"max"                       { return MAX; }
+"isprime"                   { return ISPRIME; }
+"exp"                       { return POW; }
+
+"int"                       { return INT; }
+"float"                     { return FLOAT; }
+"ch"                        { return CHAR; }
+"array"                     { return ARRAY; }
+"func"                      { return FUNCTION; }
+
+"##"                        { comment_line = yylloc.first_line; BEGIN(COMMENT); }
+<COMMENT>"##"               { BEGIN(INITIAL); }
+<COMMENT>\n                 { /* location updated by YY_USER_ACTION */ }
+<COMMENT>.                  { /* comment body */ }
+<COMMENT><<EOF>>            {
+                                fprintf(stderr, "line %d: lexical error: unterminated comment\n", comment_line);
+                                ++diagnostic_errors;
+                                BEGIN(INITIAL);
+                                return INVALID;
+                            }
+"#"[^#\n][^\n]*            { /* single-line comment */ }
+"#"                         { /* empty single-line comment */ }
+"connect"[ \t]+[^\n]*    { /* optional header */ }
+
+{number}                    {
+                                errno = 0;
+                                long value = strtol(yytext, NULL, 10);
+                                if (errno == ERANGE || value > INT_MAX) {
+                                    fprintf(stderr, "line %d: lexical error: integer literal out of range\n", yylloc.first_line);
+                                    ++diagnostic_errors;
+                                    return INVALID;
+                                }
+                                yylval.val = (int)value;
+                                return NUMBER;
+                            }
+{identifier}                {
+                                if ((size_t)yyleng >= sizeof(yylval.text)) {
+                                    fprintf(stderr, "line %d: lexical error: identifier exceeds 127 characters\n", yylloc.first_line);
+                                    ++diagnostic_errors;
+                                    return INVALID;
+                                }
+                                memcpy(yylval.text, yytext, (size_t)yyleng + 1);
+                                return VAR;
+                            }
+
+[ \t\r\n]+                 { /* whitespace */ }
+"="                         { return '='; }
+[(),:;<>]                   { return yytext[0]; }
+
+.                           {
+                                fprintf(stderr, "line %d: lexical error: unknown character: %s\n", yylloc.first_line, yytext);
+                                ++diagnostic_errors;
+                                return INVALID;
+                            }
 
 %%
-
-int yywrap(){}
-int main(){
-   yyin = freopen("input.txt","r",stdin);
-   yyout = freopen("output.txt","w",stdout);
-   yylex();
-}

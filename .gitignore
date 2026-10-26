@@ -1,0 +1,31 @@
+# Build outputs
+*.o
+*.obj
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+a.out
+compiler
+build/
+bin/
+
+# Flex/Bison generated files
+lex.yy.c
+*.tab.c
+*.tab.h
+*.output
+
+# Program-generated output
+output.txt
+
+# Temporary/editor files
+.DS_Store
+*.swp
+*.swo
+*~
+
+# IDE metadata
+.vscode/
+.idea/
